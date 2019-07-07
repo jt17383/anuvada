@@ -19,12 +19,13 @@ DEFAULT_LOSS = CrossEntropyLoss()
 DEFAULT_OPTIMIZER = partial(SGD, lr=0.01, momentum=0.9)
 # DEFAULT_DTYPE = torch.FloatTensor
 
+class FitModuleRNN(Module):
 
-class FitModuleCNN(Module):
 
     def fit(self,
             x=None,
             y=None,
+            masks_for_rnn=None,
             batch_size=64,
             epochs=1,
             verbose=1,
@@ -89,6 +90,7 @@ class FitModuleCNN(Module):
             split = int(x.size()[0] * (1. - validation_split))
             x, val_x = x[:split], x[split:]
             y, val_y = y[:split], y[split:]
+            masks_for_rnn, masks_for_rnn_val = masks_for_rnn[:split], masks_for_rnn[split:]
         else:
             val_x, val_y = None, None
         # Compile optimizer
@@ -100,7 +102,7 @@ class FitModuleCNN(Module):
         train_idxs = np.arange(n,dtype=np.int64)
         for t in range(initial_epoch, epochs):
             if verbose:
-                print(("Epoch {0} / {1}".format(t+1, epochs)))
+                print("Epoch {0} / {1}".format(t+1, epochs))
             # Shuffle training set
             if shuffle:
                 np.random.shuffle(train_idxs)
@@ -122,8 +124,10 @@ class FitModuleCNN(Module):
                     y_batch = Variable(y[batch_idxs]).type(self.dtype)
                 else:
                     y_batch = Variable(y[batch_idxs]).type(self.embedding_tensor)
+                mask = masks_for_rnn[batch_start: batch_end]
                 self.batch_size = batch_size
-                y_batch_pred = self(x_batch)
+                init_hidden = self.init_hidden()
+                y_batch_pred = self(x_batch, mask, init_hidden)
                 opt.zero_grad()
                 batch_loss = loss(y_batch_pred, y_batch)
                 batch_loss.backward()
@@ -137,8 +141,8 @@ class FitModuleCNN(Module):
             if metrics:
                 y_train_pred = self.predict(x, batch_size)
                 add_metrics_to_log(log, metrics, y, y_train_pred)
-            if val_x is not None and val_y is not None:
-                y_val_pred = self.predict(val_x)
+            if val_x is not None and val_y is not None and masks_for_rnn_val is not None:
+                y_val_pred = self.predict(val_x, masks_for_rnn_val)
                 if multilabel:
                     val_loss = loss(Variable(y_val_pred).type(self.dtype), Variable(val_y).type(self.dtype))
                 else:
@@ -152,7 +156,7 @@ class FitModuleCNN(Module):
                 pb.close(log_to_message(log))
         return logs
 
-    def predict(self, x):
+    def predict(self, x, masks_for_rnn):
         """Generates output predictions for the input samples.
 
         Computation is done in batches.
@@ -170,17 +174,20 @@ class FitModuleCNN(Module):
         batches = make_batches(n, batch_size)
         batches.pop()
         self.eval()
+        init_hidden = self.init_hidden()
         for batch_i, (batch_start, batch_end) in enumerate(batches):
             # Get batch data
             batch_idxs = train_idxs[batch_start : batch_end]
+            mask = masks_for_rnn[batch_start: batch_end]
             batch_idxs = torch.from_numpy(batch_idxs).long()
             x_batch = x[batch_idxs]
             x_batch = Variable(x_batch).type(self.embedding_tensor)
             # Predict
-            y_batch_pred = self(x_batch).data
+            y_batch_pred = self(x_batch, mask, init_hidden).data
             # Infer prediction shape
             if batch_i == 0:
                 y_pred = torch.zeros((n,) + y_batch_pred.size()[1:]).type(self.dtype)
+            #print batch_idxs
             batch_idxs = batch_idxs.type(self.embedding_tensor)
             y_pred[batch_idxs] = y_batch_pred
         return y_pred

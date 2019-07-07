@@ -100,7 +100,7 @@ class FitModuleCNN(Module):
         train_idxs = np.arange(n,dtype=np.int64)
         for t in range(initial_epoch, epochs):
             if verbose:
-                print(("Epoch {0} / {1}".format(t+1, epochs)))
+                print("Epoch {0} / {1}".format(t+1, epochs))
             # Shuffle training set
             if shuffle:
                 np.random.shuffle(train_idxs)

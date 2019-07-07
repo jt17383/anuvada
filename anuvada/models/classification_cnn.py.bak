@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .fit_module_cnn import FitModuleCNN
+from fit_module_cnn import FitModuleCNN
 from gensim.models import Word2Vec
 import numpy as np
 from torch.autograd import Variable

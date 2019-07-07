@@ -30,7 +30,7 @@ def add_metrics_to_log(log, metrics, y_true, y_pred, prefix=''):
 
 def log_to_message(log, precision=4):
     fmt = "{0}: {1:." + str(precision) + "f}"
-    return "    ".join(fmt.format(k, v) for k, v in log.items())
+    return "    ".join(fmt.format(k, v) for k, v in list(log.items()))
 
 
 class ProgressBar(object):
@@ -64,14 +64,14 @@ class ProgressBar(object):
 
 def save_model(model_object, filepath):
     torch.save(model_object.state_dict(), filepath)
-    print 'Model saved.'
+    print('Model saved.')
     return None
 
 
 def load_model(model_object, filepath):
     weights = torch.load(filepath)
     model_object.load_state_dict(weights)
-    print 'Model loaded.'
+    print('Model loaded.')
     return None
 
 def to_multilabel(list_of_ids, n_classes):

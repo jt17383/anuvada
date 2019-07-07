@@ -11,7 +11,7 @@ import codecs
 from gensim.models import Word2Vec
 import numpy as np
 
-from .fit_module_rnn import FitModuleRNN
+from fit_module_rnn import FitModuleRNN
 
 
 class AttentionClassifier(FitModuleRNN):
@@ -35,7 +35,7 @@ class AttentionClassifier(FitModuleRNN):
             try:
                 self.lookup.weight.data.copy_(torch.from_numpy(wv_matrix))
             except:
-                print('Please check your Word2Vec model...')
+                print 'Please check your Word2Vec model...'
         self.gru = nn.GRU(embed_size, gru_hidden, bidirectional=True)
         self.weight_attention = nn.Parameter(torch.Tensor(2 * gru_hidden, 2 * gru_hidden))
         self.bias_attention = nn.Parameter(torch.Tensor(2 * gru_hidden, 1))
